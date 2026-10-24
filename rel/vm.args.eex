@@ -1,12 +1,16 @@
 ## Customize flags given to the VM: http://erlang.org/doc/man/erl.html
 ## -mode/-name/-sname/-setcookie are configured via env vars, do not set them here
 
-## Number of dirty schedulers doing IO work (file, sockets, etc)
-##+SDio 5
+## Railway exposes every host CPU (48) to the container, so by default the VM
+## starts 48 schedulers + 48 dirty CPU schedulers, each with its own memory
+## allocators. A single-instance bot is I/O bound; two of each is plenty.
++S 2:2
++SDcpu 2:2
++SDio 4
 
-## Increase number of concurrent ports/sockets
-##+Q 65536
+## Don't busy-wait idle schedulers: CPU is billed per use.
++sbwt none
++sbwtdcpu none
++sbwtdio none
 
-## Tweak GC to run more often
-##-env ERL_FULLSWEEP_AFTER 10
 -start_epmd false -erl_epmd_port 6789

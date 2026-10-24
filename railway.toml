@@ -1,3 +1,6 @@
+# NOTE: the live service does not read this file (its deployments show an
+# empty file manifest), and Railway retires config-as-code on 2026-12-01.
+# The settings below are applied directly on the service; keep both in sync.
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
@@ -8,3 +11,7 @@ healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
 numReplicas = 1
+# Serverless: stop the container after ~10 min with no outbound traffic; the
+# next Telegram webhook / OAuth request wakes it (a few seconds' cold start).
+# Idle, the bot makes no network calls (the inbox worker only polls SQLite).
+sleepApplication = true
