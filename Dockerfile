@@ -1,29 +1,22 @@
-FROM hexpm/elixir:1.19.5-erlang-28.3.1-ubuntu-noble-20260113
-
-# install build dependencies
-RUN apt-get update -y && apt-get install -y build-essential git \
-    && apt-get clean && rm -f /var/lib/apt/lists/*_*
-
-# Install hex and rebar
-RUN mix local.hex --force && \
-    mix local.rebar --force
-
-ENV MIX_ENV=prod
-ENV ERL_FLAGS="+JPperf true"
-
+FROM hexpm/elixir:1.19.5-erlang-28.3.1-ubuntu-noble-20260113 AS build
+RUN apt-get update -y && apt-get install -y --no-install-recommends build-essential git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-
-# Fetch dependencies
-COPY mix.exs .
-COPY mix.lock .
-RUN mix deps.get
-RUN mix deps.compile
-
-# Copy over all the necessary application files and directories
-COPY config/config.exs ./config/
-COPY config/prod.exs ./config/
-COPY config/runtime.exs ./config/
+ENV MIX_ENV=prod
+RUN mix local.hex --force && mix local.rebar --force
+COPY mix.exs mix.lock ./
+COPY config ./config
+RUN mix deps.get --only prod && mix deps.compile
 COPY lib ./lib
 COPY priv ./priv
 COPY rel ./rel
-CMD ["mix", "release", "--overwrite"]
+RUN mix release --overwrite
+
+FROM ubuntu:noble
+RUN apt-get update -y && apt-get install -y --no-install-recommends libstdc++6 openssl libncurses6 ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=build /app/_build/prod/rel/todoist_bot ./
+ENV LANG=C.UTF-8
+EXPOSE 8080
+CMD ["/app/bin/todoist_bot", "start"]

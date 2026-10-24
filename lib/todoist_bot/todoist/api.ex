@@ -15,7 +15,9 @@ defmodule TodoistBot.Todoist.API do
       url: "https://todoist.com/oauth/access_token",
       json: body,
       method: :post,
-      retry: :transient
+      retry: false,
+      redirect: false,
+      retry_log_level: false
     ]
     |> Req.new()
     |> @adapter.request()
@@ -24,7 +26,13 @@ defmodule TodoistBot.Todoist.API do
   def new(access_token, options \\ []) do
     [
       base_url: "https://api.todoist.com",
-      auth: {:bearer, access_token}
+      auth: {:bearer, access_token},
+      redirect: false,
+      retry: false,
+      retry_log_level: false,
+      decode_body: true,
+      compressed: false,
+      receive_timeout: 30_000
     ]
     |> Req.new()
     |> Req.merge(options)

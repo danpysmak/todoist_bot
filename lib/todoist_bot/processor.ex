@@ -2,14 +2,15 @@ defmodule TodoistBot.Processor do
   alias TodoistBot.Commands
   alias TodoistBot.Interaction
   alias TodoistBot.Telegram.API
-  require Logger
 
   def process_message(%{} = update) do
-    with {:ok, interaction} <- Interaction.from_update(update),
-         {:ok, interaction} <- Interaction.load_user(interaction, update) do
-      interaction
-      |> Commands.match()
-      |> send_response()
+    if TodoistBot.Access.allowed?(update) do
+      with {:ok, interaction} <- Interaction.from_update(update),
+           {:ok, interaction} <- Interaction.load_user(interaction, update) do
+        interaction |> Commands.match() |> send_response()
+      end
+    else
+      :ignored
     end
   end
 
@@ -75,7 +76,12 @@ defmodule TodoistBot.Processor do
         fn {_, v} -> v == nil end
       )
 
-    API.request("editMessageText", params)
-    :ok
+    case API.request("editMessageText", params) do
+      {:ok, %{status: 400, body: %{"description" => "Bad Request: message is not modified"}}} ->
+        {:ok, %Req.Response{status: 200, body: %{"ok" => true}}}
+
+      result ->
+        result
+    end
   end
 end

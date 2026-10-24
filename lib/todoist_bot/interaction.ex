@@ -12,6 +12,7 @@ defmodule TodoistBot.Interaction do
       field(:chat_id, :integer)
       field(:text, :string)
       field(:callback, :string)
+      field(:is_command, :boolean, default: true)
     end
 
     embeds_one :response, Response do
@@ -52,7 +53,8 @@ defmodule TodoistBot.Interaction do
       request: %{
         raw: update,
         chat_id: get_in(update, ["message", "chat", "id"]),
-        text: get_in(update["message"]["text"]) || get_in(update["message"]["caption"]) || ""
+        text: get_in(update["message"]["text"]) || get_in(update["message"]["caption"]) || "",
+        is_command: command_message?(update["message"] || %{})
       },
       response: %{
         chat_id: get_in(update, ["message", "chat", "id"])
@@ -73,7 +75,7 @@ defmodule TodoistBot.Interaction do
 
   def request_changeset(request, attrs \\ %{}) do
     request
-    |> cast(attrs, [:raw, :chat_id, :text, :callback])
+    |> cast(attrs, [:raw, :chat_id, :text, :callback, :is_command])
     |> validate_required([:raw, :chat_id])
   end
 
@@ -117,6 +119,14 @@ defmodule TodoistBot.Interaction do
     }
     |> put_resp_text(text)
     |> put_resp_type(:message)
+  end
+
+  defp command_message?(message) do
+    is_binary(message["text"]) and TodoistBot.Attachment.extract(message) == :none and
+      not Enum.any?(
+        ["forward_origin", "forward_from", "forward_from_chat", "forward_date"],
+        &(not is_nil(message[&1]))
+      )
   end
 
   def put_resp_text(%__MODULE__{} = i, text), do: put_in(i.response.text, text)

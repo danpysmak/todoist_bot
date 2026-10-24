@@ -1,0 +1,8 @@
+.git
+_build
+deps
+*.db
+*.db-*
+*.log
+.env*
+telegram-api.html

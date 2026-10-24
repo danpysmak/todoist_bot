@@ -1,0 +1,58 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '28.3'
+          elixir-version: '1.19.5'
+      - run: mix local.hex --force && mix local.rebar --force
+        env:
+          MIX_ENV: test
+      - run: mix deps.get --check-locked
+        env:
+          MIX_ENV: test
+      - run: mix format --check-formatted && mix test
+        env:
+          MIX_ENV: test
+      - run: mix deps.get --only prod && mix release --overwrite
+        env:
+          MIX_ENV: prod
+      - name: Offline release runtime and private-log smoke
+        run: |
+          _build/prod/rel/todoist_bot/bin/todoist_bot eval 'Code.eval_file("scripts/smoke_release.exs")' > smoke.log 2>&1
+          python3 scripts/check_smoke_log.py smoke.log
+        env:
+          BOT_TOKEN: '123456:synthetic-owner-test'
+          OWNER_TELEGRAM_ID: '1'
+          TODOIST_APP_CLIENT_ID: synthetic
+          TODOIST_APP_CLIENT_SECRET: synthetic
+          APP_HOST: https://example.invalid/
+          PORT: '19009'
+          DB_PATH: ${{ github.workspace }}/_build/smoke.db
+          USE_WEBHOOK: 'true'
+          WEBHOOK_TOKEN: synthetic_webhook_secret_32_characters
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t todoist-bot:ci .
+      - name: Offline Docker release runtime
+        run: |
+          docker run --rm --network none \
+            -v "$PWD/scripts:/smoke:ro" \
+            -e BOT_TOKEN=123456:synthetic-owner-test -e OWNER_TELEGRAM_ID=1 \
+            -e TODOIST_APP_CLIENT_ID=synthetic -e TODOIST_APP_CLIENT_SECRET=synthetic \
+            -e APP_HOST=https://example.invalid/ -e PORT=19009 -e DB_PATH=/app/smoke.db \
+            -e USE_WEBHOOK=true -e WEBHOOK_TOKEN=synthetic_webhook_secret_32_characters \
+            todoist-bot:ci /app/bin/todoist_bot eval 'Code.eval_file("/smoke/smoke_release.exs")' > smoke.log 2>&1
+          python3 scripts/check_smoke_log.py smoke.log

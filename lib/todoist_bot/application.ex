@@ -14,7 +14,7 @@ defmodule TodoistBot.Application do
     TodoistBot.Release.migrate()
 
     opts = [strategy: :one_for_one, name: TodoistBot.Supervisor]
-    Supervisor.start_link([TodoistBot.Repo] ++ children() ++ [task_supervisor, router], opts)
+    Supervisor.start_link([TodoistBot.Repo, task_supervisor, router] ++ children(), opts)
   end
 
   if Mix.env() == :test do
@@ -32,14 +32,18 @@ defmodule TodoistBot.Application do
           {TodoistBot.Poller, [Application.fetch_env!(:todoist_bot, :bot_token)]}
         end
 
-      [
-        %{
-          id: WebhookCleanup,
-          start: {TodoistBot.Webhook, :delete_webhook, []},
-          restart: :transient
-        },
-        poller_or_webhook
-      ]
+      cleanup =
+        if Application.get_env(:todoist_bot, :use_webhook) == "true",
+          do: [],
+          else: [
+            %{
+              id: WebhookCleanup,
+              start: {TodoistBot.Webhook, :delete_webhook, []},
+              restart: :transient
+            }
+          ]
+
+      [TodoistBot.Inbox] ++ cleanup ++ [poller_or_webhook]
     end
   end
 end
