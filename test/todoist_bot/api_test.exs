@@ -1,5 +1,5 @@
 defmodule TodoistBotTest.Api do
-  use ExUnit.Case, async: true
+  use TodoistBot.DataCase, async: false
   import Plug.Test
   import Plug.Conn
 
@@ -15,6 +15,7 @@ defmodule TodoistBotTest.Api do
   end
 
   test "/authorize/ redirects user to todoist" do
+    Repo.insert!(%TodoistBot.User{telegram_id: 666, auth_state: "666.test"})
     conn = conn(:get, "/authorize?uuid=666.test")
 
     conn = TodoistBot.Api.call(conn, @opts)
@@ -23,7 +24,7 @@ defmodule TodoistBotTest.Api do
     assert conn.resp_body == "You're being redirected..."
 
     assert get_resp_header(conn, "location") == [
-             "https://todoist.com/oauth/authorize?client_id=secret_client_id&scope=task:add&state=666.test"
+             "https://todoist.com/oauth/authorize?client_id=secret_client_id&scope=data%3Aread_write&state=666.test"
            ]
   end
 

@@ -41,6 +41,6 @@ defmodule TodoistBot.User do
   end
 
   defp random_string do
-    Enum.random(10_000_000_000..99_999_999_999) |> to_string()
+    :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
   end
 end

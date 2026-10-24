@@ -74,7 +74,13 @@ defmodule TodoistBotTest.Webhook do
 
       expect(API.Mock, :request, fn req ->
         assert %Req.Request{
-                 options: %{json: %{url: "https://localhost/secret_token", max_connections: 40}}
+                 options: %{
+                   json: %{
+                     url: "https://localhost/secret_token/",
+                     max_connections: 1,
+                     secret_token: "secret_token"
+                   }
+                 }
                } = req
 
         API.Stub.request(req)

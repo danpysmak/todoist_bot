@@ -31,7 +31,6 @@ defmodule TodoistBot.MixProject do
       {:jason, "~> 1.4"},
       {:mox, "~> 1.1", only: :test},
       {:req, "~> 0.5.6"},
-      {:off_broadway_telegram, "~> 1.0"},
       {:ecto_sql, "~> 3.0"},
       {:ecto_sqlite3, "~> 0.17"},
       {:disco_log,
