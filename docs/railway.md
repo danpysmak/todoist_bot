@@ -127,6 +127,16 @@ Treat the database and backups as credentials-bearing private data. Include rete
 - Do not run an irreversible migration down or restore an old database merely because a `Release.rollback` function exists. Agree on the exact recovery boundary first.
 - Verify `/healthz`, delivery mode, authorization, and a benign task after rollback. Retain the failed revision and sanitized evidence for diagnosis.
 
+## Cost profile
+
+Railway bills RAM and CPU per minute while the container runs; memory is almost the whole bill. Three settings keep it near zero:
+
+- **Serverless sleep** (`sleepApplication`) is on. The container stops after about 10 minutes without outbound traffic. The next webhook or OAuth request wakes it, adding a few seconds of cold start to that first message. Telegram retries a webhook that fails during the wake, and the inbox persists the update before it acknowledges, so nothing is lost. Do not add a keep-alive ping, Discord logging or any other periodic outbound call: it would keep the container awake 24/7.
+- **Two schedulers** (`rel/vm.args.eex`). The container sees every host CPU (48), so by default the VM started 48 schedulers plus 48 dirty CPU schedulers, 112 threads in total.
+- **Interactive code loading** (`RELEASE_MODE=interactive` in `rel/env.sh.eex`) loads modules on first use instead of preloading about 1,200 at boot.
+
+Together the scheduler and code-loading changes cut resident memory by about 40% in a local Docker measurement (173 MB → 100 MB). `PORT=8080` is pinned on the service so the app, the public domain's target port and the healthcheck agree.
+
 ## 9. Acceptance / smoke checklist
 
 Run against the new test bot and an approved Todoist account, then record candidate revision, environment, date, and pass/fail without private contents. These are required checks, **not checks claimed to have run**.
